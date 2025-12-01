@@ -1,31 +1,19 @@
-"""
- Copyright (c) 2023, salesforce.com, inc.
- All rights reserved.
- SPDX-License-Identifier: Apache License 2.0
- For full license text, see the LICENSE file in the repo root or https://www.apache.org/licenses/LICENSE-2.0
-"""
-
-import random
-import re, string, os
-import json 
-import time
-import tiktoken
-from langchain.llms.base import BaseLLM
-from langchain.docstore import Wikipedia
-from langchain.llms import OpenAI
-from langchain.docstore.base import Docstore
-from langchain.agents.react.base import DocstoreExplorer
-from langchain.prompts import PromptTemplate
+import os
+import re
+import string
 from collections import Counter
+
+from langchain.agents.react.base import DocstoreExplorer
+from langchain.docstore import Wikipedia
+from langchain.docstore.base import Docstore
+from langchain.llms.base import BaseLLM
 from langchain.utilities import BingSearchAPIWrapper
 
+from Path_Generation.hotpotqa_run.config import BING_SUBSCRIPTION_KEY
+from Path_Generation.hotpotqa_run.fewshots import KNOWAGENT_EXAMPLE
+from Path_Generation.hotpotqa_run.llms import token_enc
+from Path_Generation.hotpotqa_run.pre_prompt import knowagent_prompt
 
-from hotpotqa_run.pre_prompt import knowagent_prompt
-from hotpotqa_run.fewshots import KNOWAGENT_EXAMPLE
-
-from hotpotqa_run.llms import token_enc
-
-from hotpotqa_run.config import BING_SUBSCRIPTION_KEY
 
 def parse_action(string):
     pattern = r'^(\w+)\[(.+)\]$' 
@@ -38,7 +26,8 @@ def parse_action(string):
     else:
         action_type, argument = fuzzy_parse_action(string)
         return action_type, argument
-        
+
+
 def fuzzy_parse_action(text):
     text = text.strip(' ').strip('.')
     pattern = r'^(\w+)\[(.+)\]'
@@ -50,10 +39,12 @@ def fuzzy_parse_action(text):
     else:
         return text, ''
 
+
 def format_step(step: str) -> str:
     return step.strip('\n').strip().replace('\n', '')
 
-def truncate_scratchpad(scratchpad: str, n_tokens: int = 1600, tokenizer = token_enc) -> str:
+
+def truncate_scratchpad(scratchpad: str, n_tokens: int = 1600, tokenizer=token_enc) -> str:
     lines = scratchpad.split('\n')
     observations = filter(lambda x: x.startswith('Observation'), lines)
     observations_by_tokens = sorted(observations, key=lambda x: len(tokenizer.encode(x)))
@@ -62,6 +53,7 @@ def truncate_scratchpad(scratchpad: str, n_tokens: int = 1600, tokenizer = token
         ind = lines.index(largest_observation)
         lines[ind] = largest_observation.split(':')[0] + ': [truncated wikipedia excerpt]'
     return '\n'.join(lines)
+
 
 def normalize_answer(s):
     def remove_articles(text):
@@ -78,6 +70,7 @@ def normalize_answer(s):
         return text.lower()
 
     return white_space_fix(remove_articles(remove_punc(lower(s))))
+
 
 def f1_score(prediction, ground_truth):
     normalized_prediction = normalize_answer(prediction)
@@ -101,6 +94,7 @@ def f1_score(prediction, ground_truth):
     f1 = (2 * precision * recall) / (precision + recall)
     return f1, precision, recall
 
+
 def EM(answer, key) -> bool:
     return normalize_answer(answer) == normalize_answer(key)
 
@@ -111,7 +105,7 @@ class BaseAgent:
                  key: str,
                  llm: BaseLLM,
                  context_len: int = 2000,
-                 max_steps: int= 10,
+                 max_steps: int = 10,
                  docstore: Docstore = Wikipedia()
                  ) -> None:
         
@@ -125,7 +119,7 @@ class BaseAgent:
         self.run_error = False
         self.name = "Base_HotPotQA_run_Agent"
         self.pre_action = ''
-        self.docstore = DocstoreExplorer(docstore) # Search, Lookup
+        self.docstore = DocstoreExplorer(docstore)  # Search, Lookup
         self.bingsearch_results = ''
         self.search_results_num = 3
         self.llm = llm
@@ -133,7 +127,7 @@ class BaseAgent:
         self.enc = token_enc
         self.__reset_agent()
     
-    def run(self, reset = True) -> None:
+    def run(self, reset=True) -> None:
         if reset:
             self.__reset_agent()
         
@@ -205,7 +199,7 @@ class BaseAgent:
 
             bingsearch = BingSearchAPIWrapper(search_kwargs={"mkt": "en-GB"})
             self.bingsearch_results = bingsearch.results(argument,self.search_results_num)
-            result = self.bingsearch_results[0]['snippet'].replace("<b>","").replace("</b>","")
+            result = self.bingsearch_results[0]['snippet'].replace("<b>", "").replace("</b>", "")
         except:
             self.scratchpad += f'Search error,please try again'
         return result
@@ -222,7 +216,7 @@ class BaseAgent:
                     name_lower = res["title"].lower()
                     if all(word in snippet_lower or word in name_lower for word in argument_words):
                         lookups.append(snippet_lower.replace("<b>", "").replace("</b>", ""))
-                    if lookups == []:
+                    if not lookups:
                         return "No results found."
                     else:
                         return lookups[0]
@@ -273,7 +267,8 @@ class BaseAgent:
                 try:
                     self.scratchpad += format_step(self.docstore.lookup(argument))
                 except ValueError:
-                    self.scratchpad += f'The last page Retrieved was not found, so you cannot Lookup a keyword in it. Please try one of the similar pages given.'
+                    self.scratchpad += ('The last page Retrieved was not found, so you cannot Lookup a keyword in it. '
+                                        'Please try one of the similar pages given.')
             elif self.pre_action == "Search":
                 try:
                     self.scratchpad += format_step(self.search_lookup(argument))
@@ -281,7 +276,8 @@ class BaseAgent:
                     self.scratchpad += f'The last page Searched was not found, so you cannot Lookup a keyword in it.'
 
         else:
-            self.scratchpad += 'Invalid Action. Valid Actions are Lookup[<topic>] Search[<topic>] Retrieve[<topic>] and Finish[<answer>].'
+            self.scratchpad += ('Invalid Action. Valid Actions are Lookup[<topic>] Search[<topic>] Retrieve[<topic>] '
+                                'and Finish[<answer>].')
 
         print(self.scratchpad.split('\n')[-1])
 
@@ -292,7 +288,8 @@ class BaseAgent:
     
     def forward(self):
         raise NotImplementedError
-    
+
+
 class KnowAgentHotpotQA(BaseAgent):
     def __init__(self,
                  question: str,
@@ -314,10 +311,11 @@ class KnowAgentHotpotQA(BaseAgent):
 
     def _build_agent_prompt(self) -> str:
         return self.agent_prompt.format(
-                            examples = self.examples,
-                            question = self.question,
-                            scratchpad = self.scratchpad)
-        
+                            examples=self.examples,
+                            question=self.question,
+                            scratchpad=self.scratchpad)
+
+
 def get_agent(agent_name):
     if agent_name in ["KnowAgentHotpotQA"]:
         return KnowAgentHotpotQA

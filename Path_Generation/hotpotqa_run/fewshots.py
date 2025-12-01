@@ -1,10 +1,3 @@
-"""
- Copyright (c) 2023, salesforce.com, inc.
- All rights reserved.
- SPDX-License-Identifier: Apache License 2.0
- For full license text, see the LICENSE file in the repo root or https://www.apache.org/licenses/LICENSE-2.0
-"""
-
 KNOWAGENT_EXAMPLE = """Question: Musician and satirist Allie Goertz wrote a song about the "The Simpsons" character Milhouse, who Matt Groening named after who?
 ActionPath 1: Start
 Thought 1: From "Start", the adjacent nodes are "Search" and "Retrieve". The subsequent action should only be chosen from these options. The question simplifies to "The Simpsons" character Milhouse is named after who. I only need to retrieve Milhouse and find who it is named after.

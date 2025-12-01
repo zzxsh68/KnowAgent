@@ -1,13 +1,7 @@
-"""
- Copyright (c) 2023, salesforce.com, inc.
- All rights reserved.
- SPDX-License-Identifier: Apache License 2.0
- For full license text, see the LICENSE file in the repo root or https://www.apache.org/licenses/LICENSE-2.0
-"""
-
 import os
 import joblib
 import json
+
 
 def summarize_trial(agents):
     correct = [a for a in agents if a.is_correct()]
@@ -19,6 +13,7 @@ def remove_fewshot(prompt: str) -> str:
     prefix = prompt.split('Here are some examples:')[0]
     suffix = prompt.split('(END OF EXAMPLES)')[1]
     return prefix.strip('\n').strip() + '\n' +  suffix.strip('\n').strip()
+
 
 def log_trial(agents, trial_n):
     correct, incorrect, not_finish = summarize_trial(agents)
@@ -62,11 +57,12 @@ def log_agent(agent, file_path):
     halted = agent.is_halted()
     error = agent.run_error
     prompt = agent._build_agent_prompt()
-    save_dict = {"question":question, "answer":g_truth, "correct":correct, "reward":reward, 
-                 "halted":halted, "error":error,"prompt":prompt}
+    save_dict = {"question": question, "answer": g_truth, "correct": correct, "reward": reward,
+                 "halted": halted, "error": error, "prompt": prompt}
     with open(file_path, 'a') as f:
         json.dump(save_dict, f)
         f.write("\n")
+
 
 def print_agent(agent):
     question = agent.question
@@ -76,9 +72,10 @@ def print_agent(agent):
     halted = agent.is_halted()
     error = agent.run_error
     prompt = agent._build_agent_prompt()
-    print_dict = {"question":question, "answer":g_truth, "correct":correct, "reward":reward, 
-                 "halted":halted, "error":error,"prompt":prompt}
+    print_dict = {"question": question, "answer": g_truth, "correct": correct, "reward": reward,
+                  "halted": halted, "error": error, "prompt": prompt}
     print(print_dict)
+
 
 def get_all_agent_sessions(file_name):
     sessions = []
@@ -87,6 +84,7 @@ def get_all_agent_sessions(file_name):
             session = json.loads(line)
             sessions.append(session)
     return sessions
+
 
 def get_error_tasks(sessions):
     error_tasks = []
@@ -97,6 +95,7 @@ def get_error_tasks(sessions):
     error_tasks = list(set(error_tasks))
     return error_tasks
 
+
 def get_non_error_tasks(sessions):
     tasks = []
     for sess in sessions:   
@@ -105,6 +104,7 @@ def get_non_error_tasks(sessions):
             tasks.append(task)
     tasks = list(set(tasks))
     return tasks
+
 
 def delete_error(file_name):
     sessions = get_all_agent_sessions(file_name)
@@ -117,17 +117,20 @@ def delete_error(file_name):
         for sess in non_error_sessions:
             json.dump(sess, f)
             f.write('\n')
-            
+
+
 def summarize_react_trial(agents):
     correct = [a for a in agents if a.is_correct()]
     halted = [a for a in agents if a.is_halted()]
     incorrect = [a for a in agents if a.is_finished() and not a.is_correct()]
     return correct, incorrect, halted
 
+
 def summarize_react_trial_detailed(agents):
     correct = [a.is_correct() for a in agents]
     reward = [a.reward()[0] for a in agents]
     return correct, reward
+
 
 def log_react_trial(agents, trial_n):
     correct, incorrect, halted = summarize_react_trial(agents)
@@ -153,13 +156,15 @@ Trial summary: Correct: {len(correct)}, Incorrect: {len(incorrect)}, Halted: {le
 
     return log
 
+
 def save_agents(agents, dir: str):
     os.makedirs(dir, exist_ok=True)
     for i, agent in enumerate(agents):
         agent.enc = None
         joblib.dump(agent, os.path.join(dir, f'{i}.joblib'))
 
-def load_agents(dir:str):
+
+def load_agents(dir: str):
     import tiktoken
     agents = []
     for f in os.listdir(dir):

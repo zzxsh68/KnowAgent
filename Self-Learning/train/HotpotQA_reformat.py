@@ -57,6 +57,7 @@ Action 3: Finish[yes]
 
 (END OF EXAMPLES)"""
 
+
 def prompt_retrieve(prompt: str) -> str:
     end_of_examples_index = prompt.find("(END OF EXAMPLES)")
     if end_of_examples_index != -1:
@@ -72,6 +73,7 @@ def prompt_retrieve(prompt: str) -> str:
         remaining_content = ""
 
     return remaining_content
+
 
 output_path = args.output_path
 if output_path[-1]!='/':
