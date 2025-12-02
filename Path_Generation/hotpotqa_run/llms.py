@@ -12,26 +12,29 @@ from Path_Generation.hotpotqa_run.config import OPENAI_API_KEY
 import tiktoken
 token_enc = tiktoken.get_encoding("cl100k_base")
 
-OPENAI_CHAT_MODELS = ["gpt-3.5-turbo","gpt-3.5-turbo-16k-0613","gpt-3.5-turbo-16k","gpt-4-0613","gpt-4-32k-0613"]
-FASTCHAT_MODELS = ["llama-2-13b-chat","vicuna-7b"]
+OPENAI_CHAT_MODELS = ["gpt-3.5-turbo", "gpt-3.5-turbo-16k-0613", "gpt-3.5-turbo-16k", "gpt-4-0613", "gpt-4-32k-0613"]
+FASTCHAT_MODELS = ["llama-2-13b-chat", "vicuna-7b"]
 os.environ['OPENAI_API_KEY'] = OPENAI_API_KEY
 
 
-class langchain_openai_chatllm:
+class LangchainOpenaiChatllm:
     def __init__(self, llm_name):
         openai.api_key = OPENAI_API_KEY
         self.llm_name = llm_name
         human_template = "{prompt}"
         human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
         self.chat_prompt = ChatPromptTemplate.from_messages([human_message_prompt])
+        self.chain = None
    
-    def run(self, prompt, temperature=1, stop=['\n'], max_tokens=128):
+    def run(self, prompt, temperature=1, stop=None, max_tokens=128):
+        if stop is None:
+            stop = ['\n']
         chat = ChatOpenAI(model=self.llm_name, temperature=temperature, stop=stop, max_tokens=max_tokens)
         self.chain = LLMChain(llm=chat, prompt=self.chat_prompt)
         return self.chain.run(prompt)
 
 
-class langchain_fastchat_llm:
+class LangchainFastchatLlm:
     def __init__(self, llm_name):
         openai.api_key = "EMPTY"  # Not supported yet
         self.prompt_temp = PromptTemplate(
@@ -39,7 +42,9 @@ class langchain_fastchat_llm:
         )
         self.llm_name = llm_name
         
-    def run(self, prompt, temperature=0.9, stop=['\n'], max_tokens=128):
+    def run(self, prompt, temperature=0.9, stop=None, max_tokens=128):
+        if stop is None:
+            stop = ['\n']
         openai.api_base = "http://10.1.50.26:8000/v1"
         llm = OpenAI(
             model=self.llm_name, 
@@ -55,7 +60,8 @@ class langchain_fastchat_llm:
 
 
 def get_llm_backend(llm_name):
-    if llm_name in OPENAI_CHAT_MODELS:
-        return langchain_openai_chatllm(llm_name)
+    if llm_name not in OPENAI_CHAT_MODELS:
+        return LangchainFastchatLlm(llm_name)
     else:
-        return langchain_fastchat_llm(llm_name)
+        return LangchainOpenaiChatllm(llm_name)
+

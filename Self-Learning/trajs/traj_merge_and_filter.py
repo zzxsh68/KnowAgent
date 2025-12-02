@@ -2,20 +2,25 @@ import json
 import re
 import argparse
 
-
 parser = argparse.ArgumentParser(description="The process of Knowledgeable Self_Learning.")
-parser.add_argument("--task", type=str, required=True, choices=['HotpotQA', 'ALFWorld'], help="The name of the task to perform. Accepts 'HotpotQA' or 'ALFWorld'.")
-parser.add_argument("--input_path1", type=str, required=True, help="File path to the first input JSONL file that needs to be processed.")
-parser.add_argument("--input_path2", type=str, required=True, help="File path to the second input JSONL file that needs to be processed.")
-parser.add_argument("--output_path", type=str, required=True, help="Output file path where the merged JSONL file will be saved.")
+parser.add_argument("--task", type=str, required=True, choices=['HotpotQA', 'ALFWorld'],
+                    help="The name of the task to perform. Accepts 'HotpotQA' or 'ALFWorld'.")
+parser.add_argument("--input_path1", type=str, required=True,
+                    help="File path to the first input JSONL file that needs to be processed.")
+parser.add_argument("--input_path2", type=str, required=True,
+                    help="File path to the second input JSONL file that needs to be processed.")
+parser.add_argument("--output_path", type=str, required=True,
+                    help="Output file path where the merged JSONL file will be saved.")
 args = parser.parse_args()
 
-input_path1 =  args.input_path1
-input_path2 =  args.input_path2
+input_path1 = args.input_path1
+input_path2 = args.input_path2
 output_path = args.output_path
-if output_path[-1]!='/':
-    output_path+='/'
+if output_path[-1] != '/':
+    output_path += '/'
 output_path = output_path + f"{args.task}_processed_knowagent.jsonl"
+
+
 def process_prompt_for_hotpotqa(prompt):
     lines = prompt.strip().split('\n')
     if len(lines) < 2:
@@ -29,13 +34,15 @@ def process_prompt_for_hotpotqa(prompt):
     actions = [action for action in actions if action]
     return actions
 
+
 def process_prompt_for_alfworld(prompt):
     lines = prompt.strip().split('\n')
-    count = 0  
-    for line in lines:  
-        if "> " in line:  
-            count += 1 
-    return count  
+    count = 0
+    for line in lines:
+        if "> " in line:
+            count += 1
+    return count
+
 
 # Read and filter jsonl file, returning correct entries and a mapping of questions to answers
 def read_jsonl_for_hotpotqa(file_path):
@@ -44,10 +51,12 @@ def read_jsonl_for_hotpotqa(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         for line in file:
             entry = json.loads(line.strip())
-            if entry['correct'] == True and 'answer' in entry and 'Invalid Action' not in entry['prompt'] and 'Search error' not in entry['prompt']:
+            if (entry['correct'] is True and 'answer' in entry and
+                    'Invalid Action' not in entry['prompt'] and 'Search error' not in entry['prompt']):
                 correct_entries.append(entry)
                 question_to_answer[entry['question']] = entry
     return correct_entries, question_to_answer
+
 
 def read_jsonl_for_alfworld(file_path):
     correct_entries = []
@@ -55,10 +64,11 @@ def read_jsonl_for_alfworld(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         for line in file:
             entry = json.loads(line.strip())
-            if entry['result'] == True:
+            if entry['result']:
                 correct_entries.append(entry)
                 question_to_answer[entry['name']] = entry
     return correct_entries, question_to_answer
+
 
 # Read the files
 if args.task == "HotpotQA":
@@ -67,6 +77,9 @@ if args.task == "HotpotQA":
 elif args.task == "ALFWorld":
     correct_entries1, question_to_answer1 = read_jsonl_for_alfworld(input_path1)
     correct_entries2, question_to_answer2 = read_jsonl_for_alfworld(input_path2)
+else:
+    correct_entries1 = None
+    correct_entries2 = None
 
 # Count
 number_of_correct_items_1 = len(correct_entries1)
@@ -111,7 +124,9 @@ elif args.task == "ALFWorld":
                 number_of_none_replaced_items += 1
         else:
             merged_entries[question] = entry
-            
+else:
+    merged_entries = None
+
 # Count merged items
 number_of_merged_items = len(merged_entries)
 

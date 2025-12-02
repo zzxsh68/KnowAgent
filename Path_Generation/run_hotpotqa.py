@@ -8,7 +8,6 @@ from hotpotqa_run.llms import get_llm_backend
 import warnings
 warnings.filterwarnings('ignore')
 
-
 parser = argparse.ArgumentParser(description='Parsing the input of agents, llms and llm context length.')
 parser.add_argument("--llm_name", type=str, help="Name of the llm", default="gpt-3.5-turbo")
 parser.add_argument("--max_context_len", type=int, help="Maximum context length", default=1700)
@@ -40,7 +39,9 @@ def run_one_complex_level(level="easy"):
         # hotpot=hotpot[:2]
         agent_save_file = f"{output_path}{level}_{agent_name}_{llm_name}.jsonl"
         task_instructions = [(row['question'], row['answer']) for _, row in hotpot.iterrows()]
-
+    else:
+        print("Mode Error!")
+        return
     if os.path.exists(agent_save_file):
         sessions = utils.get_all_agent_sessions(agent_save_file)
         completed_tasks = utils.get_non_error_tasks(sessions)

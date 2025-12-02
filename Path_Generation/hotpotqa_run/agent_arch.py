@@ -198,7 +198,7 @@ class BaseAgent:
             os.environ["BING_SEARCH_URL"] = "https://api.bing.microsoft.com/v7.0/search"
 
             bingsearch = BingSearchAPIWrapper(search_kwargs={"mkt": "en-GB"})
-            self.bingsearch_results = bingsearch.results(argument,self.search_results_num)
+            self.bingsearch_results = bingsearch.results(argument, self.search_results_num)
             result = self.bingsearch_results[0]['snippet'].replace("<b>", "").replace("</b>", "")
         except:
             self.scratchpad += f'Search error,please try again'
