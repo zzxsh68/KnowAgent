@@ -53,7 +53,7 @@ def log_agent(agent, file_path):
     question = agent.question
     g_truth = agent.key
     correct = agent.is_correct()
-    reward = agent.reward()[0]
+    reward = agent.reward()
     halted = agent.is_halted()
     error = agent.run_error
     prompt = agent._build_agent_prompt()

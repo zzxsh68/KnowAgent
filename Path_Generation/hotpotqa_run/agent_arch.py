@@ -14,6 +14,12 @@ from Path_Generation.hotpotqa_run.fewshots import KNOWAGENT_EXAMPLE
 from Path_Generation.hotpotqa_run.llms import token_enc
 from Path_Generation.hotpotqa_run.pre_prompt import knowagent_prompt
 
+from ddgs import DDGS
+from ddgs.exceptions import DDGSException
+import zhconv
+
+ddgs = DDGS()
+
 
 def parse_action(string):
     pattern = r'^(\w+)\[(.+)\]$' 
@@ -121,6 +127,7 @@ class BaseAgent:
         self.pre_action = ''
         self.docstore = DocstoreExplorer(docstore)  # Search, Lookup
         self.bingsearch_results = ''
+        self.ddgs_search_results = ''
         self.search_results_num = 3
         self.llm = llm
         
@@ -150,7 +157,7 @@ class BaseAgent:
         return self.finished
     
     def reward(self) -> float:
-        return f1_score(self.answer, self.key)   
+        return f1_score(self.answer, self.key)[0]
     
     def is_correct(self) -> bool:
         return EM(self.answer, self.key)
@@ -191,7 +198,18 @@ class BaseAgent:
         print(self.scratchpad.split('\n')[-1])
         return action_type, argument
 
-    def _bingsearch(self, argument):
+    def _ddgs_search(self, query, region='us-en'):
+        result = ''
+        try:
+            self.ddgs_search_results = ddgs.text(query, region=region, safesearch='on', max_results=3)
+            result = self.ddgs_search_results[0]['body']
+            if region == 'cn-zh':
+                result = zhconv.convert(result, 'zh-cn')
+        except (Exception, DDGSException):
+            self.scratchpad += f'Search error,please try again'
+        return result
+
+    def _bingsearch(self, argument):    # It's too hard to get the key
         result = ''
         try:
             os.environ["BING_SUBSCRIPTION_KEY"] = BING_SUBSCRIPTION_KEY
@@ -203,6 +221,25 @@ class BaseAgent:
         except:
             self.scratchpad += f'Search error,please try again'
         return result
+
+    def search_lookup_new(self, query):
+        if self.ddgs_search_results == '':
+            return "You need to search first."
+        else:
+            lookups = []
+            try:
+                for res in self.ddgs_search_results:
+                    query_words = query.lower().split()
+                    body_lower = res["body"].lower()
+                    name_lower = res["title"].lower()
+                    if all(word in body_lower or word in name_lower for word in query_words):
+                        lookups.append(body_lower)
+                    if not lookups:
+                        return "No results found."
+                    else:
+                        return lookups[0]
+            except (Exception, KeyError):
+                return "No results found."
 
     def search_lookup(self, argument):
         if self.bingsearch_results == '':
@@ -248,7 +285,7 @@ class BaseAgent:
         if action_type == 'Search':
             try:
                 self.pre_action = "Search"
-                tmp = self._bingsearch(format_step(argument))
+                tmp = self._ddgs_search(format_step(argument))
                 self.scratchpad += format_step(tmp)
             except Exception as e:
                 print(e)
@@ -271,7 +308,7 @@ class BaseAgent:
                                         'Please try one of the similar pages given.')
             elif self.pre_action == "Search":
                 try:
-                    self.scratchpad += format_step(self.search_lookup(argument))
+                    self.scratchpad += format_step(self.search_lookup_new(argument))
                 except ValueError:
                     self.scratchpad += f'The last page Searched was not found, so you cannot Lookup a keyword in it.'
 

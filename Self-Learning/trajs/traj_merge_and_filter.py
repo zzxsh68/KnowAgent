@@ -29,7 +29,7 @@ def process_prompt_for_hotpotqa(prompt):
     path = second_to_last_line.split(': ')[-1] if ': ' in second_to_last_line else ""
     cleaned_prompt = re.sub(r'^Start->', '', path)
     cleaned_prompt = re.sub(r'->Finish.*', '', cleaned_prompt)
-    cleaned_prompt = re.sub(r'\[.*?\]', '', cleaned_prompt)
+    cleaned_prompt = re.sub(r'\[.*?]', '', cleaned_prompt)
     actions = cleaned_prompt.strip().split('->')
     actions = [action for action in actions if action]
     return actions
@@ -136,7 +136,7 @@ with open(output_path, 'w', encoding='utf-8') as output_file:
         output_file.write(json.dumps(entry) + '\n')
 
 # Output statistics
-print(f"Completed. The  dmerged and filtered data has been saved to {output_path}")
+print(f"Completed. The merged and filtered data has been saved to {output_path}")
 print(f"Number of correct items in the first file: {number_of_correct_items_1}")
 print(f"Number of correct items in the second file: {number_of_correct_items_2}")
 print(f"Number of replaced items due to shorter action paths: {number_of_replaced_items}")
